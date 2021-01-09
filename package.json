@@ -1,0 +1,22 @@
+{
+  "name": "TwitchHooks",
+  "version": "1.0.0",
+  "description": "",
+  "main": "oldTwitch.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.0",
+    "colors": "^1.4.0",
+    "dayjs": "^1.9.3",
+    "discord.js": "github:discordjs/discord.js",
+    "dotenv": "^8.2.0",
+    "twitch": "^4.2.7",
+    "twitch-auth": "^4.2.7",
+    "twitch-webhooks": "^4.2.7"
+  }
+}
