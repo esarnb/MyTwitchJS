@@ -146,28 +146,27 @@ client.on("ready", async () => {
     console.log("Done!".cyan)
 })
 
-client.on("message", (msg) => {
-    if (msg.author.bot || (msg.content.startsWith(client.prefix) && msg.content.charAt(msg.content.length - 1) == client.prefix)) return;
+// client.on("message", (msg) => {
+//     if (msg.author.bot || (msg.content.startsWith(client.prefix) && msg.content.charAt(msg.content.length - 1) == client.prefix)) return;
 
-    //Setup prefix
-    let prefixes = [client.prefix, `<@${client.user.id}> `, `<@!${client.user.id}> `];
-    for (thisPrefix of prefixes) if (msg.content.startsWith(thisPrefix)) client.prefix = thisPrefix;
-    if(msg.content.indexOf(client.prefix) !== 0) return;
+//     //Setup prefix
+//     let prefixes = [client.prefix, `<@${client.user.id}> `, `<@!${client.user.id}> `];
+//     for (thisPrefix of prefixes) if (msg.content.startsWith(thisPrefix)) client.prefix = thisPrefix;
+//     if(msg.content.indexOf(client.prefix) !== 0) return;
     
-    //Load Args, cmd
-    const args = msg.content.slice(client.prefix.length).trim().split(/ +/g);
-    const command = args.shift().toLowerCase();
+//     //Load Args, cmd
+//     const args = msg.content.slice(client.prefix.length).trim().split(/ +/g);
+//     const command = args.shift().toLowerCase();
 
-    switch (command) {
-        case "ping": msg.channel.send("Pong c:"); break;
-        case "streaming": streaming_cmd(msg, args); break;
-        case "twitch": twitch_cmd(msg, args); break;
-        case "help": help_cmd(msg, args); break;
-        default: break;
-    }
+//     switch (command) {
+//         case "ping": msg.channel.send("TwitchJS Script online c:"); break;
+//         case "streaming": streaming_cmd(msg, args); break;
+//         case "twitch": twitch_cmd(msg, args); break;
+//         default: break;
+//     }
 
-    return;
-})
+//     return;
+// })
 
 
 function streaming_cmd(m, args) {
