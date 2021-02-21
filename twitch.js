@@ -1,14 +1,35 @@
 require("dotenv").config();
 require("colors");
+console.log("*******************************************************************");
 
+const fs = require("fs")
 const {Client, MessageEmbed, WebhookClient} = require("discord.js");
 const { ApiClient } = require('twitch');
 const { WebHookListener, SimpleAdapter } = require('twitch-webhooks');
-const { ClientCredentialsAuthProvider } = require("twitch-auth");
+// const { ClientCredentialsAuthProvider } = require("twitch-auth");
+const { ClientCredentialsAuthProvider, RefreshableAuthProvider, StaticAuthProvider } = require("twitch-auth");
 const {twitchClientID, twitchClientSecret} = process.env;
 
-const client = new Client();
-const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
+const client = new Client({intents: 1 << 14});
+// const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
+
+let tokenObj =  fs.readFileSync('./tokens.json', {encoding: 'UTF-8'})
+let tokenData = JSON.parse(tokenObj)
+const authProvider = new RefreshableAuthProvider( new StaticAuthProvider(twitchClientID, tokenData.accessToken), {
+        clientSecret: twitchClientSecret,
+        refreshToken: tokenData.refreshToken,
+        expiry: tokenData.expiryTimestamp === null ? null : new Date(tokenData.expiryTimestamp),
+        onRefresh: async ({ accessToken, refreshToken, expiryDate }) => {
+            const newTokenData = {
+                accessToken,
+                refreshToken,
+                expiryTimestamp: expiryDate === null ? null : expiryDate.getTime()
+            };
+            fs.writeFileSync('./tokens.json', JSON.stringify(newTokenData, null, 4),  {encoding: 'UTF-8'})
+        }
+    }
+);
+
 const apiClient = new ApiClient({ authProvider });
 const listener = new WebHookListener(apiClient, new SimpleAdapter({ hostName: process.env.TwitchIP, listenerPort: process.env.TwitchPort }));
 
@@ -22,6 +43,8 @@ dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(relativeTime)
 client.prefix = ","
+client.login(process.env.TOKEN)
+
 
 /* Empy */ let emp = new WebhookClient(process.env.empyHookID, process.env.empyHookToken)
 /* Saabpar */ let sbp = new WebhookClient(process.env.saabparHookID, process.env.saabparHookToken)
@@ -58,7 +81,6 @@ let streamers = {
 
 }
 
-client.login(process.env.TOKEN)
 
 client.on("ready", async () => {
     console.log(`[Twitch] ${client.user.tag} is now online!`.green);

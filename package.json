@@ -16,7 +16,7 @@
     "discord.js": "github:discordjs/discord.js",
     "dotenv": "^8.2.0",
     "twitch": "^4.2.7",
-    "twitch-auth": "^4.2.7",
+    "twitch-auth": "^4.4.11",
     "twitch-webhooks": "^4.2.7"
   }
 }
