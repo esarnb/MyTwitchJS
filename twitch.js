@@ -51,9 +51,10 @@ client.login(process.env.TOKEN)
 /* x Test */ let test = new WebhookClient(process.env.testHookID, process.env.testHookToken);
 /* Aylin */ let aylin = new WebhookClient(process.env.aylinHookID, process.env.aylinHookToken);
 /* Venvi */ let venvi = new WebhookClient(process.env.venviHookID, process.env.venviHookToken);
+/* Kikle */ let kikle = new WebhookClient(process.env.kikiHookID, process.env.kikiHookToken);
 
 let streamers = {
-    "EmperorSR": { hooks: [test, emp],               subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
+    "EmperorSR": { hooks: [test, emp],          subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
 
     // // Saabpar
     "saabpar": { hooks: [sbp, venvi],           subs: null, live: null },
@@ -65,18 +66,21 @@ let streamers = {
     "yngplo": { hooks: [sbp],                   subs: null, live: null },
 
     // // Aylin
-    "bonedipcollect": { hooks: [sbp, aylin],    subs: null, live: null },
-    "brotherpiko": { hooks: [aylin],            subs: null, live: null },
-    "mr_shorty13": { hooks: [aylin],            subs: null, live: null },
-    "lineant": { hooks: [aylin],                subs: null, live: null },
-    "trianglemikey": { hooks: [aylin],          subs: null, live: null },
-    "nyxnxn": { hooks: [aylin],                 subs: null, live: null },
-    "CHANCEBEFLYAf": { hooks: [aylin],          subs: null, live: null },
+    "nyxnxn": { hooks: [sbp],                   subs: null, live: null },
+            // "bonedipcollect": { hooks: [sbp, aylin],    subs: null, live: null },
+            // "brotherpiko": { hooks: [aylin],            subs: null, live: null },
+            // "mr_shorty13": { hooks: [aylin],            subs: null, live: null },
+            // "lineant": { hooks: [aylin],                subs: null, live: null },
+            // "trianglemikey": { hooks: [aylin],          subs: null, live: null },
+            // "CHANCEBEFLYAf": { hooks: [aylin],          subs: null, live: null },
+
+    // // Kikle
+    "xkiklex": { hooks: [kikle],                subs: null, live: null },
 
     // // Personal
+    "michaelreeves": { hooks: [emp],            subs: null, live: null },
     // "xQcOW": { hooks: [emp],                 subs: null, live: null },
     // "Souljaboy": { hooks: [emp],             subs: null, live: null },
-    "michaelreeves": { hooks: [emp],            subs: null, live: null },
     // "Smii7y": { hooks: [emp],                subs: null, live: null },
 
 }
