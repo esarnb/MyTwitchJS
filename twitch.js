@@ -1,48 +1,129 @@
-console.log(`================================= script load =================================`);
 require("dotenv").config();
 require("colors");
-
-
-let axios = require("axios");
+let crypt = require('crypto');
 let dayjs = require("dayjs");
-const utc = require('dayjs/plugin/utc')
-const timezone = require('dayjs/plugin/timezone')
-const relativeTime = require('dayjs/plugin/relativeTime')
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const relativeTime = require('dayjs/plugin/relativeTime');
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(relativeTime);
 
-dayjs.extend(utc)
-dayjs.extend(timezone)
-dayjs.extend(relativeTime)
-
-
-const fs = require("fs")
+const { promises:fs } = require("fs")
 const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
 
-const myIntents = new Intents();
-myIntents.add('GUILD_PRESENCES', 'GUILD_MEMBERS');
+const {
+    TOKEN, TwitchIP, TwitchPort,
+    twitchClientID, twitchClientSecret, 
+    empyHookID, empyHookToken, 
+    saabparHookID, saabparHookToken, 
+    testHookID, testHookToken, 
+    aylinHookID, aylinHookToken, 
+    venviHookID, venviHookToken, 
+    kikiHookID, kikiHookToken,
+    
+} = process.env;
+
+
 const client = new Client( { intents: Intents.ALL } );
-client.prefix = ","
-client.login(process.env.TOKEN)
 
 const { ApiClient } = require('twitch');
-const { WebHookListener, SimpleAdapter } = require('twitch-webhooks');
+const { ClientCredentialsAuthProvider } = require('twitch-auth');
+const { EventSubListener, ReverseProxyAdapter } = require('twitch-eventsub');
 
-const { ClientCredentialsAuthProvider, RefreshableAuthProvider, StaticAuthProvider } = require("twitch-auth");
-const {twitchClientID, twitchClientSecret} = process.env;
+const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
+const apiClient = new ApiClient({ authProvider });
+const listener = new EventSubListener(apiClient, new ReverseProxyAdapter({
+    hostName: TwitchIP, // The host name the server is available from
+    port: TwitchPort  // Por the server should listen to
+    //externalPort: The external port (optional, defaults to 443)
+}));
 
-// let authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
-// let apiClient = new ApiClient({ authProvider });
 
+(async () => { 
+    try {
+        listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green))
+            
+        let user = await apiClient.helix.users.getUserByName("EmperorSR")
+        if (!user) return console.log(`${keyName} does not exist.`);
+            
+        let {displayName, id: userid} = user;
+        console.log(`${displayName}:${userid}`);
+            
         
-    /* Empy */ let emp = new WebhookClient(process.env.empyHookID, process.env.empyHookToken)
-    /* Saabpar */ let sbp = new WebhookClient(process.env.saabparHookID, process.env.saabparHookToken)
-    /* x Test */ let test = new WebhookClient(process.env.testHookID, process.env.testHookToken);
-    /* Aylin */ let aylin = new WebhookClient(process.env.aylinHookID, process.env.aylinHookToken);
-    /* Venvi */ let venvi = new WebhookClient(process.env.venviHookID, process.env.venviHookToken);
-    /* Kikle */ let kikle = new WebhookClient(process.env.kikiHookID, process.env.kikiHookToken);
+        const subON = await listener.subscribeToStreamOnlineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went live!`.purple) });
+        const subOFF = await listener.subscribeToStreamOfflineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went offline`.purple) });
+        console.log("Sub", subON, subOFF);
+                
+        process.on("SIGINT", async () => {
+            console.log(`Closing Script`);
+            // Kill all twitch subscription listeners beforing ending script. 
+            subON.stop
+            subOFF.stop
+            clearInterval(tokenPeriod)
+            process.exit()
+        });
+
+    } catch (e) {console.log("HELPPPPPPPPP 1".red, e)}
+})();
+
+
+client.prefix = ",";
+
+/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken )
+/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken )
+/* x Test */ let test = new WebhookClient(testHookID, testHookToken )
+/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken )
+/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken )
+/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken )
+
+client.on("ready", async () => {
+    let prompt = `[Twitch] ${client.user.tag} is now online!`;
+    console.log(prompt.green);
+
+
+
+
+
+});
+
+client.login(TOKEN);
+
+(async () => {
+    try {
+        //
+    } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
+})();
+
+let tokenPeriod = setInterval(async () => {
+    let pathname = "./tokens.json", options = {encoding: "utf-8"};
+    let sObj = await fs.readFile(pathname, options);
+    let obj = JSON.parse(sObj);
+
+    if (obj.hours < 1) {
+        obj.hours = 24;
+        obj.secret = crypt.randomBytes(64).toString('hex');
+    }
+    else obj.hours--;
+    await fs.writeFile(pathname, JSON.stringify(obj) ,options);
+
+}, (1000 * 60 * 60))
+
+
+
+process.on("SIGINT", async () => {
+    console.log(`Closing Script`);
+    // Kill all twitch subscription listeners beforing ending script. 
+    // subscription.stop().then(() => process.exit())
+    clearInterval(tokenPeriod)
+    process.exit()
+});
+
+/*
 
     let streamers = {
-        "EmperorSR": { hooks: [test],               subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
-    /*
+        "EmperorSR": { hooks: [test], subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
+        
         // // Saabpar
         "saabpar": { hooks: [sbp, venvi],           subs: null, live: null },
         "TheresaaRere": { hooks: [sbp, aylin],      subs: null, live: null },
@@ -69,121 +150,7 @@ const {twitchClientID, twitchClientSecret} = process.env;
         // "xQcOW": { hooks: [emp],                 subs: null, live: null },
         // "Souljaboy": { hooks: [emp],             subs: null, live: null },
         // "Smii7y": { hooks: [emp],                subs: null, live: null },
-    */
     }
 
-
-fs.promises.readFile('./tokens.json', {encoding: 'UTF-8'}).then( async (tokenObj) => {
     
-    let token = JSON.parse(tokenObj)
-    authProvider = new RefreshableAuthProvider( new StaticAuthProvider(twitchClientID, token.accessToken), {
-            clientSecret: twitchClientSecret,
-            refreshToken: token.refreshToken,
-            expiry: token.expiryTimestamp === null ? null : new Date(token.expiryTimestamp),
-            onRefresh: async ({ accessToken, refreshToken, expiryDate }) => {
-                const newTokenData = { accessToken, refreshToken, expiryTimestamp: expiryDate?.getTime() };
-                await fs.writeFile('./tokens.json', JSON.stringify(newTokenData, null, 4), {encoding: 'UTF-8'}, () => console.log("Refreshed Auth Token".purple))
-            }
-        }
-    );
-
-    apiClient = new ApiClient({ authProvider });
-    const listener = new WebHookListener(apiClient, new SimpleAdapter({ hostName: process.env.TwitchIP, listenerPort: process.env.TwitchPort }));
-    listener.listen().then(() => { console.log(`Now listening to Twitch Event Listener `.green) })    
-
-    client.on("ready", async () => {
-        let prompt = `[Twitch] ${client.user.tag} is now online!`;
-        test.send(prompt)
-        console.log(prompt.green);
-    
-let keyName = "EmperorSR"   
-    
-        let user = await apiClient.helix.users.getUserByName(keyName)
-        if (!user) return console.log(`${keyName} does not exist.`);
-            
-        let {displayName, id: userid} = user;
-        console.log(`===${displayName}:${userid}`);
-        let prevStream = await apiClient.helix.streams.getStreamByUserName(displayName); 
-        if (prevStream) {
-            console.log(`======${keyName} is already streaming`);
-            console.log(prevStream);
-        }
-        else console.log(`======${keyName} is not currently streaming`);
-    
-        const subscription = await listener.subscribeToStreamChanges(userid, async (stream) => {
-            
-            if (stream) { 
-                if (!prevStream) {
-                    test.send(`=========${displayName} just started streaming`)
-                    console.log((`=========${displayName} just started streaming`));
-                }
-                else {
-                    test.send(`=========${displayName} stream changed`)
-                    console.log((`=========${displayName} stream changed`));
-                }
-            } 
-            else { 
-                test.send(`=========${displayName} has ended the stream`)
-                console.log((`=========${displayName} has ended the stream`));
-             }
-    
-        });
-    
-        subscription.start().then(() => { 
-            console.log(`Subscribed to ${displayName}:${userid}`.grey)
-        })
-
-        
-process.on("SIGINT", async () => {
-    // Kill all twitch subscription listeners beforing ending script. 
-    // for (x in streamers) streamers[x].subs ? streamers[x].subs.stop() : null;
-    console.log(`Closing Script`);
-    subscription.stop().then(() => process.exit())
-})
-
-
-
-
-    })
-    
-})
-
-
-/* 
-                        Console log output
-
-
-1|Twitch   | ================================= Old script load =================================
-1|Twitch   | [Twitch] PJS-Twitch#6375 is now online!
-1|Twitch   | ===EmperorSR:77008186
-1|Twitch   | ======EmperorSR is already streaming
-1|Twitch   | HelixStream {
-1|Twitch   |   _data: {
-1|Twitch   |     id: '41837819518',
-1|Twitch   |     user_id: '77008186',
-1|Twitch   |     user_login: 'emperorsr',
-1|Twitch   |     user_name: 'EmperorSR',
-1|Twitch   |     game_id: '512901',
-1|Twitch   |     game_name: 'Code of Ethics',
-1|Twitch   |     type: 'live',
-1|Twitch   |     title: 'Trying to fix Twitch Webhooks Code [test update 7]',
-1|Twitch   |     viewer_count: 2,
-1|Twitch   |     started_at: '2021-02-25T20:26:17Z',
-1|Twitch   |     language: 'en',
-1|Twitch   |     thumbnail_url: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_emperorsr-{width}x{height}.jpg',
-1|Twitch   |     tag_ids: [
-1|Twitch   |       '6ea6bca4-4712-4ab9-a906-e3336a9d8039',
-1|Twitch   |       'a59f1e4e-257b-4bd0-90c7-189c3efbf917'
-1|Twitch   |     ]
-1|Twitch   |   }
-1|Twitch   | }
-1|Twitch   | Hooked EmperorSR:77008186
-
-
-1|Twitch   | ================================= script load =================================
-1|Twitch   | [Twitch] PJS-Twitch#6375 is now online!
-1|Twitch   | ===EmperorSR:77008186
-1|Twitch   | ======EmperorSR is already streaming
-1|Twitch   | [HelixStream#41837819518 - please check https://d-fischer.github.io/twitch/reference/classes/HelixStream.html for available properties]
-1|Twitch   | Hooked EmperorSR:77008186
-*/
+    */
