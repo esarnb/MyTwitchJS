@@ -3,43 +3,6 @@ require("dotenv").config();
 require("colors");
 
 
-const fs = require("fs")
-const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
-
-const myIntents = new Intents();
-myIntents.add('GUILD_PRESENCES', 'GUILD_MEMBERS');
-const client = new Client( { intents: Intents.ALL } );
-
-const { ApiClient } = require('twitch');
-const { ClientCredentialsAuthProvider } = require("twitch-auth");
-const { WebHookListener, SimpleAdapter } = require('twitch-webhooks');
-// const { ClientCredentialsAuthProvider, RefreshableAuthProvider, StaticAuthProvider } = require("twitch-auth");
-const {twitchClientID, twitchClientSecret} = process.env;
-
-// const client = new Client({intents: 1 << 14});
-
-const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
-
-// let tokenObj =  fs.readFileSync('./tokens.json', {encoding: 'UTF-8'})
-// let tokenData = JSON.parse(tokenObj)
-// const authProvider = new RefreshableAuthProvider( new StaticAuthProvider(twitchClientID, tokenData.accessToken), {
-//         clientSecret: twitchClientSecret,
-//         refreshToken: tokenData.refreshToken,
-//         expiry: tokenData.expiryTimestamp === null ? null : new Date(tokenData.expiryTimestamp),
-//         onRefresh: async ({ accessToken, refreshToken, expiryDate }) => {
-//             const newTokenData = {
-//                 accessToken,
-//                 refreshToken,
-//                 expiryTimestamp: expiryDate === null ? null : expiryDate.getTime()
-//             };
-//             fs.writeFileSync('./tokens.json', JSON.stringify(newTokenData, null, 4),  {encoding: 'UTF-8'})
-//         }
-//     }
-// );
-
-const apiClient = new ApiClient({ authProvider });
-const listener = new WebHookListener(apiClient, new SimpleAdapter({ hostName: process.env.TwitchIP, listenerPort: process.env.TwitchPort }));
-
 let axios = require("axios");
 let dayjs = require("dayjs");
 const utc = require('dayjs/plugin/utc')
@@ -49,89 +12,140 @@ const relativeTime = require('dayjs/plugin/relativeTime')
 dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(relativeTime)
+
+
+const fs = require("fs")
+const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
+
+const myIntents = new Intents();
+myIntents.add('GUILD_PRESENCES', 'GUILD_MEMBERS');
+const client = new Client( { intents: Intents.ALL } );
 client.prefix = ","
 client.login(process.env.TOKEN)
 
+const { ApiClient } = require('twitch');
+const { WebHookListener, SimpleAdapter } = require('twitch-webhooks');
 
-/* Empy */ let emp = new WebhookClient(process.env.empyHookID, process.env.empyHookToken)
-/* Saabpar */ let sbp = new WebhookClient(process.env.saabparHookID, process.env.saabparHookToken)
-/* x Test */ let test = new WebhookClient(process.env.testHookID, process.env.testHookToken);
-/* Aylin */ let aylin = new WebhookClient(process.env.aylinHookID, process.env.aylinHookToken);
-/* Venvi */ let venvi = new WebhookClient(process.env.venviHookID, process.env.venviHookToken);
-/* Kikle */ let kikle = new WebhookClient(process.env.kikiHookID, process.env.kikiHookToken);
+const { ClientCredentialsAuthProvider, RefreshableAuthProvider, StaticAuthProvider } = require("twitch-auth");
+const {twitchClientID, twitchClientSecret} = process.env;
 
-let streamers = {
-    "EmperorSR": { hooks: [test],               subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
-/*
-    // // Saabpar
-    "saabpar": { hooks: [sbp, venvi],           subs: null, live: null },
-    "TheresaaRere": { hooks: [sbp, aylin],      subs: null, live: null },
-    "go_malabananas": { hooks: [sbp],           subs: null, live: null },
-    "snsilentninja": { hooks: [sbp],            subs: null, live: null },
-    "malandrin861": { hooks: [sbp],             subs: null, live: null },
-    "whiskrskittles7": { hooks: [sbp],          subs: null, live: null },
-    "yngplo": { hooks: [sbp],                   subs: null, live: null },
+// let authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
+// let apiClient = new ApiClient({ authProvider });
 
-    // // Aylin
-    "nyxnxn": { hooks: [sbp],                   subs: null, live: null },
-            // "bonedipcollect": { hooks: [sbp, aylin],    subs: null, live: null },
-            // "brotherpiko": { hooks: [aylin],            subs: null, live: null },
-            // "mr_shorty13": { hooks: [aylin],            subs: null, live: null },
-            // "lineant": { hooks: [aylin],                subs: null, live: null },
-            // "trianglemikey": { hooks: [aylin],          subs: null, live: null },
-            // "CHANCEBEFLYAf": { hooks: [aylin],          subs: null, live: null },
-
-    // // Kikle
-    "xkiklex": { hooks: [kikle],                subs: null, live: null },
-
-    // // Personal
-    "michaelreeves": { hooks: [emp],            subs: null, live: null },
-    // "xQcOW": { hooks: [emp],                 subs: null, live: null },
-    // "Souljaboy": { hooks: [emp],             subs: null, live: null },
-    // "Smii7y": { hooks: [emp],                subs: null, live: null },
-*/
-}
-
-client.on("ready", async () => {
-    let prompt = `[Twitch] ${client.user.tag} is now online!`;
-    test.send(prompt)
-    console.log(prompt.green);
-
-    await listener.listen();    
-
-    let keyName = "EmperorSR"
-
-    let user = await apiClient.helix.users.getUserByName(keyName)
-    if (!user) return console.log(`${keyName} does not exist.`);
         
-    let {displayName, id: userid} = user;
-    console.log(`===${displayName}:${userid}`);
-    let prevStream = await apiClient.helix.streams.getStreamByUserName(displayName); 
-    if (prevStream) {
-        console.log(`======${keyName} is already streaming`);
-        console.log(prevStream);
+    /* Empy */ let emp = new WebhookClient(process.env.empyHookID, process.env.empyHookToken)
+    /* Saabpar */ let sbp = new WebhookClient(process.env.saabparHookID, process.env.saabparHookToken)
+    /* x Test */ let test = new WebhookClient(process.env.testHookID, process.env.testHookToken);
+    /* Aylin */ let aylin = new WebhookClient(process.env.aylinHookID, process.env.aylinHookToken);
+    /* Venvi */ let venvi = new WebhookClient(process.env.venviHookID, process.env.venviHookToken);
+    /* Kikle */ let kikle = new WebhookClient(process.env.kikiHookID, process.env.kikiHookToken);
+
+    let streamers = {
+        "EmperorSR": { hooks: [test],               subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
+    /*
+        // // Saabpar
+        "saabpar": { hooks: [sbp, venvi],           subs: null, live: null },
+        "TheresaaRere": { hooks: [sbp, aylin],      subs: null, live: null },
+        "go_malabananas": { hooks: [sbp],           subs: null, live: null },
+        "snsilentninja": { hooks: [sbp],            subs: null, live: null },
+        "malandrin861": { hooks: [sbp],             subs: null, live: null },
+        "whiskrskittles7": { hooks: [sbp],          subs: null, live: null },
+        "yngplo": { hooks: [sbp],                   subs: null, live: null },
+
+        // // Aylin
+        "nyxnxn": { hooks: [sbp],                   subs: null, live: null },
+                // "bonedipcollect": { hooks: [sbp, aylin],    subs: null, live: null },
+                // "brotherpiko": { hooks: [aylin],            subs: null, live: null },
+                // "mr_shorty13": { hooks: [aylin],            subs: null, live: null },
+                // "lineant": { hooks: [aylin],                subs: null, live: null },
+                // "trianglemikey": { hooks: [aylin],          subs: null, live: null },
+                // "CHANCEBEFLYAf": { hooks: [aylin],          subs: null, live: null },
+
+        // // Kikle
+        "xkiklex": { hooks: [kikle],                subs: null, live: null },
+
+        // // Personal
+        "michaelreeves": { hooks: [emp],            subs: null, live: null },
+        // "xQcOW": { hooks: [emp],                 subs: null, live: null },
+        // "Souljaboy": { hooks: [emp],             subs: null, live: null },
+        // "Smii7y": { hooks: [emp],                subs: null, live: null },
+    */
     }
-    else console.log(`======${keyName} is not currently streaming`);
 
-    const subscription = await listener.subscribeToStreamChanges(userid, async (stream) => {
+
+fs.promises.readFile('./tokens.json', {encoding: 'UTF-8'}).then( async (tokenObj) => {
+    
+    let token = JSON.parse(tokenObj)
+    authProvider = new RefreshableAuthProvider( new StaticAuthProvider(twitchClientID, token.accessToken), {
+            clientSecret: twitchClientSecret,
+            refreshToken: token.refreshToken,
+            expiry: token.expiryTimestamp === null ? null : new Date(token.expiryTimestamp),
+            onRefresh: async ({ accessToken, refreshToken, expiryDate }) => {
+                const newTokenData = { accessToken, refreshToken, expiryTimestamp: expiryDate?.getTime() };
+                await fs.writeFile('./tokens.json', JSON.stringify(newTokenData, null, 4), {encoding: 'UTF-8'}, () => console.log("Refreshed Auth Token".purple))
+            }
+        }
+    );
+
+    apiClient = new ApiClient({ authProvider });
+    const listener = new WebHookListener(apiClient, new SimpleAdapter({ hostName: process.env.TwitchIP, listenerPort: process.env.TwitchPort }));
+    listener.listen().then(() => { console.log(`Now listening to Twitch Event Listener `.green) })    
+
+    client.on("ready", async () => {
+        let prompt = `[Twitch] ${client.user.tag} is now online!`;
+        test.send(prompt)
+        console.log(prompt.green);
+    
+let keyName = "EmperorSR"   
+    
+        let user = await apiClient.helix.users.getUserByName(keyName)
+        if (!user) return console.log(`${keyName} does not exist.`);
+            
+        let {displayName, id: userid} = user;
+        console.log(`===${displayName}:${userid}`);
+        let prevStream = await apiClient.helix.streams.getStreamByUserName(displayName); 
+        if (prevStream) {
+            console.log(`======${keyName} is already streaming`);
+            console.log(prevStream);
+        }
+        else console.log(`======${keyName} is not currently streaming`);
+    
+        const subscription = await listener.subscribeToStreamChanges(userid, async (stream) => {
+            
+            if (stream) { 
+                if (!prevStream) {
+                    test.send(`=========${displayName} just started streaming`)
+                    console.log((`=========${displayName} just started streaming`));
+                }
+                else {
+                    test.send(`=========${displayName} stream changed`)
+                    console.log((`=========${displayName} stream changed`));
+                }
+            } 
+            else { 
+                test.send(`=========${displayName} has ended the stream`)
+                console.log((`=========${displayName} has ended the stream`));
+             }
+    
+        });
+    
+        subscription.start().then(() => { 
+            console.log(`Subscribed to ${displayName}:${userid}`.grey)
+        })
+
         
-        if (stream) { 
-            if (!prevStream) test.send(`=========${displayName} just started streaming`)
-            else test.send(`=========${displayName} stream changed`)
-        } 
-        else { test.send(`=========${displayName} has ended the stream`) }
-
-    });
-
-    subscription.start().then(() => { 
-        console.log(`Hooked ${displayName}:${userid}`.grey)
-     })
-})
-
 process.on("SIGINT", async () => {
     // Kill all twitch subscription listeners beforing ending script. 
     // for (x in streamers) streamers[x].subs ? streamers[x].subs.stop() : null;
-    process.exit()
+    console.log(`Closing Script`);
+    subscription.stop().then(() => process.exit())
+})
+
+
+
+
+    })
+    
 })
 
 
