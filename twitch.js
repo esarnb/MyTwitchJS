@@ -10,8 +10,6 @@ dayjs.extend(timezone);
 dayjs.extend(relativeTime);
 
 const { promises:fs } = require("fs")
-const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
-
 const {
     TOKEN, TwitchIP, TwitchPort,
     twitchClientID, twitchClientSecret, 
@@ -25,11 +23,10 @@ const {
 } = process.env;
 
 
-const client = new Client( { intents: Intents.ALL } );
-
 const { ApiClient } = require('twitch');
 const { ClientCredentialsAuthProvider } = require('twitch-auth');
 const { EventSubListener, ReverseProxyAdapter } = require('twitch-eventsub');
+const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
 
 const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
 const apiClient = new ApiClient({ authProvider });
@@ -38,62 +35,6 @@ const listener = new EventSubListener(apiClient, new ReverseProxyAdapter({
     port: TwitchPort  // Por the server should listen to
     //externalPort: The external port (optional, defaults to 443)
 }));
-
-
-(async () => { 
-    try {
-        listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green))
-            
-        let user = await apiClient.helix.users.getUserByName("EmperorSR")
-        if (!user) return console.log(`${keyName} does not exist.`);
-            
-        let {displayName, id: userid} = user;
-        console.log(`${displayName}:${userid}`);
-            
-        
-        const subON = await listener.subscribeToStreamOnlineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went live!`.purple) });
-        const subOFF = await listener.subscribeToStreamOfflineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went offline`.purple) });
-        console.log("Sub", subON, subOFF);
-                
-        process.on("SIGINT", async () => {
-            console.log(`Closing Script`);
-            // Kill all twitch subscription listeners beforing ending script. 
-            subON.stop
-            subOFF.stop
-            clearInterval(tokenPeriod)
-            process.exit()
-        });
-
-    } catch (e) {console.log("HELPPPPPPPPP 1".red, e)}
-})();
-
-
-client.prefix = ",";
-
-/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken )
-/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken )
-/* x Test */ let test = new WebhookClient(testHookID, testHookToken )
-/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken )
-/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken )
-/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken )
-
-client.on("ready", async () => {
-    let prompt = `[Twitch] ${client.user.tag} is now online!`;
-    console.log(prompt.green);
-
-
-
-
-
-});
-
-client.login(TOKEN);
-
-(async () => {
-    try {
-        //
-    } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
-})();
 
 let tokenPeriod = setInterval(async () => {
     let pathname = "./tokens.json", options = {encoding: "utf-8"};
@@ -110,12 +51,65 @@ let tokenPeriod = setInterval(async () => {
 }, (1000 * 60 * 60))
 
 
+const client = new Client( { intents: Intents.ALL } );
+client.prefix = ",";
+client.login(TOKEN);
+
+client.on("ready", async () => {
+    let prompt = `[Twitch] ${client.user.tag} is now online!`;
+    console.log(prompt.cyan);
+
+});
+
+
+(async () => { 
+    try {
+        listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green))
+            
+        let user = await apiClient.helix.users.getUserByName("EmperorSR")
+        if (!user) return console.log(`${keyName} does not exist.`);
+            
+        let {displayName, id: userid} = user;
+        console.log(`${displayName}:${userid}`);
+            
+        
+        const subON = await listener.subscribeToStreamOnlineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went live!`.cyan) });
+        const subOFF = await listener.subscribeToStreamOfflineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went offline`.cyan) });
+        console.log("Sub", subON, subOFF);
+                
+        process.on("SIGINT", async () => {
+            console.log(`Closing Script`);
+            // Kill all twitch subscription listeners beforing ending script. 
+            subON.stop
+            subOFF.stop
+            clearInterval(tokenPeriod)
+            process.exit()
+        });
+
+    } catch (e) {console.log("HELPPPPPPPPP 1".red, e)}
+})();
+
+
+/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken )
+/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken )
+/* x Test */ let test = new WebhookClient(testHookID, testHookToken )
+/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken )
+/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken )
+/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken )
+
+
+(async () => {
+    try {
+        //
+    } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
+})();
+
+
 
 process.on("SIGINT", async () => {
     console.log(`Closing Script`);
     // Kill all twitch subscription listeners beforing ending script. 
     // subscription.stop().then(() => process.exit())
-    clearInterval(tokenPeriod)
     process.exit()
 });
 
