@@ -36,9 +36,12 @@ const {
  *     but needs to be persistent between server restarts. 
  * 
  */
-let listenerToken = 0;
+let pathname = "./tokens.json", options = {encoding: "utf-8"};
+let getToken = fs.readFileSync(pathname, options);
+let parseToken = JSON.parse(getToken)
+let listenerToken = parseToken.secret;
+console.log(listenerToken);
 let tokenPeriod = setInterval(async () => {
-    let pathname = "./tokens.json", options = {encoding: "utf-8"};
     let sObj = await fs.promises.readFile(pathname, options);
     let obj = JSON.parse(sObj);
 
@@ -80,6 +83,46 @@ client.on("ready", async () => {
 });
 
 
+/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken );
+/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken );
+/* x Test */ let test = new WebhookClient(testHookID, testHookToken );
+/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken );
+/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken );
+/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken );
+
+
+let streamers = {
+    "EmperorSR": { hooks: [test],                          subs: {online: null, offline:null, stream: null} }, 
+    
+    // // Saabpar
+    "saabpar": { hooks: [sbp, venvi],                      subs: {online: null, offline:null, stream: null} },
+    "TheresaaRere": { hooks: [sbp, aylin],                 subs: {online: null, offline:null, stream: null} },
+    "go_malabananas": { hooks: [sbp],                      subs: {online: null, offline:null, stream: null} },
+    "snsilentninja": { hooks: [sbp],                       subs: {online: null, offline:null, stream: null} },
+    "Backwoodraider": { hooks: [sbp],                        subs: {online: null, offline:null, stream: null} },
+    "whiskrskittles7": { hooks: [sbp],                     subs: {online: null, offline:null, stream: null} },
+    "yngplo": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null} },
+
+    // // Aylin
+    "nyxnxn": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null} },
+            // "bonedipcollect": { hooks: [sbp, aylin],               subs: {online: null, offline:null, stream: null} },
+            // "brotherpiko": { hooks: [aylin],                       subs: {online: null, offline:null, stream: null} },
+            // "mr_shorty13": { hooks: [aylin],                       subs: {online: null, offline:null, stream: null} },
+            // "lineant": { hooks: [aylin],                           subs: {online: null, offline:null, stream: null} },
+            // "trianglemikey": { hooks: [aylin],                     subs: {online: null, offline:null, stream: null} },
+            // "CHANCEBEFLYAf": { hooks: [aylin],                     subs: {online: null, offline:null, stream: null} },
+
+    // // Kikle
+    "xkiklex": { hooks: [kikle],                           subs: {online: null, offline:null, stream: null} },
+
+    // // Personal
+    "michaelreeves": { hooks: [emp],                       subs: {online: null, offline:null, stream: null} },
+    // "xQcOW": { hooks: [emp],                            subs: {online: null, offline:null, stream: null} },
+    // "Souljaboy": { hooks: [emp],                        subs: {online: null, offline:null, stream: null} },
+    // "Smii7y": { hooks: [emp],                           subs: {online: null, offline:null, stream: null} },
+};
+
+
 /**
  * 
  *         Promise friendly function call initializes 
@@ -90,79 +133,69 @@ client.on("ready", async () => {
     try {
         listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green));
         
-        // User profile data for offline usage & subscription search by userid
-        let user = await apiClient.helix.users.getUserByName("EmperorSR")
-        if (!user) return console.log(`${keyName} does not exist.`);
-        let {displayName, id: userid} = user;
-        console.log(`${displayName}:${userid}`);
-        
-        // All event handlers are accessed by "subscribeToStreamXXXEvents". Check parameter e for several property changes.
-        const subON = await listener.subscribeToStreamOnlineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went live!`.yellow) });
-        const subChange = await listener.subscribeToChannelUpdateEvents(userid, e => { console.log(`${e.streamTitle} [title change]`.yellow) });
-        const subOFF = await listener.subscribeToStreamOfflineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went offline`.yellow) });
-        console.log("Sub", subON, subOFF);
-        
+        for (const [name, person] of Object.entries(streamers)) {
+            
+            // User profile data for offline usage & subscription search by userid
+            let user = await apiClient.helix.users.getUserByName(name)
+            if (!user) console.log(`${name} does not exist.`);
+            else {
+                let {displayName, id: userid} = user;
+                console.log(`Subscribing to ${displayName}:${userid}`.gray);
+    
+                // All event handlers are accessed by "subscribeToStreamXXXEvents". Check parameter e for several property changes.
+                streamers[name].subs.online = await listener.subscribeToStreamOnlineEvents(userid, e => {
+                    // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName, e.startDate, e.streamType);
+                    let embed = new MessageEmbed()
+                        .setThumbnail(user.profilePictureUrl)
+                        .setTitle(`${e.broadcasterDisplayName} just went live!`)
+                        .setFooter(`broadcasterID: ${e.broadcasterId} | Stream Type: ${e.streamType}`)
+                        .setDescription(`Started Streaming: ${dayjs(startDate).tz("America/Los_Angeles").format('MM/DD/YYYY hh:mm:ssa')} PST`) 
+                    person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+
+    
+                });
+                streamers[name].subs.stream = await listener.subscribeToChannelUpdateEvents(userid, e => {
+                    console.log(e.categoryId, e.categoryName, e.isMature, e.streamLanguage, e.streamTitle, e.userDisplayName, e.userId, e.userName);
+                    // let userData = await e.getUser()
+                    // console.log( userData);
+                    let embed = new MessageEmbed().setTitle(`${name} still streaming! Update:`) .setDescription(`**x${e.streamTitle}**`)
+                    .setFooter(`Category: ${e.categoryName} | Language: ${e.streamLanguage} | Mature Only ${e.isMature}`).setThumbnail(user.profilePictureUrl)
+                    person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+    
+                });
+                streamers[name].subs.offline = await listener.subscribeToStreamOfflineEvents(userid, e => {
+                    // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName);
+    
+                    let embed = new MessageEmbed()
+                        .setTitle(`${e.broadcasterDisplayName} just went offline`)
+                        .setThumbnail(user.profilePictureUrl)
+                        .setDescription("Streamed for x min/hr")
+                    person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+
+    
+                });
+            }
+        }
         // Script end SIGINT callback defined to stop all ongoing subscriptions.
         process.on("SIGINT", async () => {
             console.log(`Closing Script`);
             // Kill all twitch subscription listeners & token interval beforing ending script. 
             clearInterval(tokenPeriod);
-            await subON.stop()
-            await subChange.stop()
-            await subOFF.stop()
-            process.exit();
+            let streams = []
+            for (x in streamers) streams.push(x.subs.online, x.subs.stream, x.subs.offline);
+            
+            Promise.all(streams).then(() => process.exit());
+            
         });
 
     } catch (e) {console.log("Lister & Subscription Error: ".red, e)}
 })();
 
 
-/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken )
-/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken )
-/* x Test */ let test = new WebhookClient(testHookID, testHookToken )
-/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken )
-/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken )
-/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken )
-
-
 /*
-
-    let streamers = {
-        "EmperorSR": { hooks: [test], subs: null, live: null }, // subs: object for subscription on/off  //live: stream object
-        
-        // // Saabpar
-        "saabpar": { hooks: [sbp, venvi],           subs: null, live: null },
-        "TheresaaRere": { hooks: [sbp, aylin],      subs: null, live: null },
-        "go_malabananas": { hooks: [sbp],           subs: null, live: null },
-        "snsilentninja": { hooks: [sbp],            subs: null, live: null },
-        "malandrin861": { hooks: [sbp],             subs: null, live: null },
-        "whiskrskittles7": { hooks: [sbp],          subs: null, live: null },
-        "yngplo": { hooks: [sbp],                   subs: null, live: null },
-
-        // // Aylin
-        "nyxnxn": { hooks: [sbp],                   subs: null, live: null },
-                // "bonedipcollect": { hooks: [sbp, aylin],    subs: null, live: null },
-                // "brotherpiko": { hooks: [aylin],            subs: null, live: null },
-                // "mr_shorty13": { hooks: [aylin],            subs: null, live: null },
-                // "lineant": { hooks: [aylin],                subs: null, live: null },
-                // "trianglemikey": { hooks: [aylin],          subs: null, live: null },
-                // "CHANCEBEFLYAf": { hooks: [aylin],          subs: null, live: null },
-
-        // // Kikle
-        "xkiklex": { hooks: [kikle],                subs: null, live: null },
-
-        // // Personal
-        "michaelreeves": { hooks: [emp],            subs: null, live: null },
-        // "xQcOW": { hooks: [emp],                 subs: null, live: null },
-        // "Souljaboy": { hooks: [emp],             subs: null, live: null },
-        // "Smii7y": { hooks: [emp],                subs: null, live: null },
-    }
-
-    
     (async () => {
-    try {
-        //
-    } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
+        try {
+            //
+        } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
     })();
-
-    */
+*/
