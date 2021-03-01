@@ -41,6 +41,8 @@ let getToken = fs.readFileSync(pathname, options);
 let parseToken = JSON.parse(getToken)
 let listenerToken = parseToken.secret;
 console.log(listenerToken);
+
+// Changing the token every 7 days [only if script is continuously online]
 let tokenPeriod = setInterval(async () => {
     let sObj = await fs.promises.readFile(pathname, options);
     let obj = JSON.parse(sObj);
@@ -79,7 +81,7 @@ client.login(TOKEN);
 client.on("ready", async () => {
     let prompt = `[Twitch] ${client.user.tag} is now online!`;
     console.log(prompt.cyan);
-
+    // do something
 });
 
 
@@ -91,7 +93,15 @@ client.on("ready", async () => {
 /* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken );
 
 
+/**
+ * 
+ *          Single giant object to store twitch users set,
+ *     Each user has respective unique properties of default null, 
+ *          filled in throughout the subscription process 
+ * 
+ */
 let streamers = {
+    // testing 
     "EmperorSR": { hooks: [test],                          subs: {online: null, offline:null, stream: null} }, 
     
     // // Saabpar
@@ -105,12 +115,12 @@ let streamers = {
 
     // // Aylin
     "nyxnxn": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null} },
-            // "bonedipcollect": { hooks: [sbp, aylin],               subs: {online: null, offline:null, stream: null} },
-            // "brotherpiko": { hooks: [aylin],                       subs: {online: null, offline:null, stream: null} },
-            // "mr_shorty13": { hooks: [aylin],                       subs: {online: null, offline:null, stream: null} },
-            // "lineant": { hooks: [aylin],                           subs: {online: null, offline:null, stream: null} },
-            // "trianglemikey": { hooks: [aylin],                     subs: {online: null, offline:null, stream: null} },
-            // "CHANCEBEFLYAf": { hooks: [aylin],                     subs: {online: null, offline:null, stream: null} },
+            // "bonedipcollect": { hooks: [sbp, aylin],    subs: {online: null, offline:null, stream: null} },
+            // "brotherpiko": { hooks: [aylin],            subs: {online: null, offline:null, stream: null} },
+            // "mr_shorty13": { hooks: [aylin],            subs: {online: null, offline:null, stream: null} },
+            // "lineant": { hooks: [aylin],                subs: {online: null, offline:null, stream: null} },
+            // "trianglemikey": { hooks: [aylin],          subs: {online: null, offline:null, stream: null} },
+            // "CHANCEBEFLYAf": { hooks: [aylin],          subs: {online: null, offline:null, stream: null} },
 
     // // Kikle
     "xkiklex": { hooks: [kikle],                           subs: {online: null, offline:null, stream: null} },
@@ -182,7 +192,7 @@ let streamers = {
             // Kill all twitch subscription listeners & token interval beforing ending script. 
             clearInterval(tokenPeriod);
             let streams = []
-            for (x in streamers) streams.push(x.subs.online, x.subs.stream, x.subs.offline);
+            for (x in streamers) streams.push(x.subs.online.off(), x.subs.stream.off(), x.subs.offline.off());
             
             Promise.all(streams).then(() => process.exit());
             
