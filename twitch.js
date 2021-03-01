@@ -1,17 +1,26 @@
 require("dotenv").config();
+// SSL handled by LetsEncrypt Certbot instead of Cloudflare Origin Certs //
+
+
 require("colors");
-let crypt = require('crypto');
 let dayjs = require("dayjs");
+let crypt = require('crypto');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const relativeTime = require('dayjs/plugin/relativeTime');
+
+const fs = require("fs")
+const { ApiClient } = require('twitch');
+const { ClientCredentialsAuthProvider } = require('twitch-auth');
+const { EventSubListener, ReverseProxyAdapter, DirectConnectionAdapter } = require('twitch-eventsub');
+const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(relativeTime);
 
-const { promises:fs } = require("fs")
 const {
-    TOKEN, TwitchIP, TwitchPort,
+    TOKEN, TwitchIP, TwitchPort, 
     twitchClientID, twitchClientSecret, 
     empyHookID, empyHookToken, 
     saabparHookID, saabparHookToken, 
@@ -19,38 +28,49 @@ const {
     aylinHookID, aylinHookToken, 
     venviHookID, venviHookToken, 
     kikiHookID, kikiHookToken,
-    
 } = process.env;
 
-
-const { ApiClient } = require('twitch');
-const { ClientCredentialsAuthProvider } = require('twitch-auth');
-const { EventSubListener, ReverseProxyAdapter } = require('twitch-eventsub');
-const {Client, MessageEmbed, WebhookClient, Intents} = require("discord.js");
-
-const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
-const apiClient = new ApiClient({ authProvider });
-const listener = new EventSubListener(apiClient, new ReverseProxyAdapter({
-    hostName: TwitchIP, // The host name the server is available from
-    port: TwitchPort  // Por the server should listen to
-    //externalPort: The external port (optional, defaults to 443)
-}));
-
+/**
+ * 
+ *       Changing token for EventListener ID Uniqueness,
+ *     but needs to be persistent between server restarts. 
+ * 
+ */
+let listenerToken = 0;
 let tokenPeriod = setInterval(async () => {
     let pathname = "./tokens.json", options = {encoding: "utf-8"};
-    let sObj = await fs.readFile(pathname, options);
+    let sObj = await fs.promises.readFile(pathname, options);
     let obj = JSON.parse(sObj);
 
-    if (obj.hours < 1) {
-        obj.hours = 24;
-        obj.secret = crypt.randomBytes(64).toString('hex');
-    }
+    if (obj.hours < 1) obj.secret = crypt.randomBytes(64).toString('hex'), obj.hours = 168;
     else obj.hours--;
     await fs.writeFile(pathname, JSON.stringify(obj) ,options);
+    listenerToken = obj.secret;
+}, (1000 * 60 * 60));
 
-}, (1000 * 60 * 60))
+/**
+ * 
+ *       Twitch d-fischer libraries & Listener location,
+ *     SSL Certified hostname and port necessary to get data. 
+ * 
+ */
+const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
+const apiClient = new ApiClient({ authProvider });
 
 
+const listener = new EventSubListener(apiClient, new ReverseProxyAdapter({
+    hostName: TwitchIP, // The host name the server is available from
+    port: TwitchPort,  // Port the server should listen to = default 8080 
+    externalPort: 443, // The external port (optional, defaults to 443)
+    // SSL handled by LetsEncrypt Certbot instead of Cloudflare Origin Certs //
+}), listenerToken);
+
+/**
+ * 
+ *         Discord Webhook & Client library connections,
+ *     Bot doesn't need to be in discord server for Webhooks.
+ * 
+ */
 const client = new Client( { intents: Intents.ALL } );
 client.prefix = ",";
 client.login(TOKEN);
@@ -62,31 +82,40 @@ client.on("ready", async () => {
 });
 
 
+/**
+ * 
+ *         Promise friendly function call initializes 
+ *          subscription to livestream and offstream.    
+ *                
+ */
 (async () => { 
     try {
-        listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green))
-            
+        listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green));
+        
+        // User profile data for offline usage & subscription search by userid
         let user = await apiClient.helix.users.getUserByName("EmperorSR")
         if (!user) return console.log(`${keyName} does not exist.`);
-            
         let {displayName, id: userid} = user;
         console.log(`${displayName}:${userid}`);
-            
         
-        const subON = await listener.subscribeToStreamOnlineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went live!`.cyan) });
-        const subOFF = await listener.subscribeToStreamOfflineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went offline`.cyan) });
+        // All event handlers are accessed by "subscribeToStreamXXXEvents". Check parameter e for several property changes.
+        const subON = await listener.subscribeToStreamOnlineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went live!`.yellow) });
+        const subChange = await listener.subscribeToChannelUpdateEvents(userid, e => { console.log(`${e.streamTitle} [title change]`.yellow) });
+        const subOFF = await listener.subscribeToStreamOfflineEvents(userid, e => { console.log(`${e.broadcasterDisplayName} just went offline`.yellow) });
         console.log("Sub", subON, subOFF);
-                
+        
+        // Script end SIGINT callback defined to stop all ongoing subscriptions.
         process.on("SIGINT", async () => {
             console.log(`Closing Script`);
-            // Kill all twitch subscription listeners beforing ending script. 
-            subON.stop
-            subOFF.stop
-            clearInterval(tokenPeriod)
-            process.exit()
+            // Kill all twitch subscription listeners & token interval beforing ending script. 
+            clearInterval(tokenPeriod);
+            await subON.stop()
+            await subChange.stop()
+            await subOFF.stop()
+            process.exit();
         });
 
-    } catch (e) {console.log("HELPPPPPPPPP 1".red, e)}
+    } catch (e) {console.log("Lister & Subscription Error: ".red, e)}
 })();
 
 
@@ -97,21 +126,6 @@ client.on("ready", async () => {
 /* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken )
 /* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken )
 
-
-(async () => {
-    try {
-        //
-    } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
-})();
-
-
-
-process.on("SIGINT", async () => {
-    console.log(`Closing Script`);
-    // Kill all twitch subscription listeners beforing ending script. 
-    // subscription.stop().then(() => process.exit())
-    process.exit()
-});
 
 /*
 
@@ -147,4 +161,10 @@ process.on("SIGINT", async () => {
     }
 
     
+    (async () => {
+    try {
+        //
+    } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
+    })();
+
     */
