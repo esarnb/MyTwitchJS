@@ -56,13 +56,13 @@ let tokenPeriod = setInterval(async () => {
  */
 const authProvider = new ClientCredentialsAuthProvider(twitchClientID, twitchClientSecret);
 const apiClient = new ApiClient({ authProvider });
-
 const listener = new EventSubListener(apiClient, new ReverseProxyAdapter({
-    hostName: "twitch.esarnb.com", // The host name the server is available from
-    port: 8080,  // Por the server should listen to = default 8080
+    hostName: TwitchIP, // The host name the server is available from
+    port: TwitchPort,  // Por the server should listen to = default 8080
     externalPort: 443, // The external port (optional, defaults to 443)
     // pathPrefix: "/twitch"
 }), listenerToken);
+
 /**
  * 
  *         Discord Webhook & Client library connections,
