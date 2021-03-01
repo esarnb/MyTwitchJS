@@ -40,18 +40,22 @@ let pathname = "./tokens.json", options = {encoding: "utf-8"};
 let getToken = fs.readFileSync(pathname, options);
 let parseToken = JSON.parse(getToken)
 let listenerToken = parseToken.secret;
-console.log(listenerToken);
 
-// Changing the token every 7 days [only if script is continuously online]
-let tokenPeriod = setInterval(async () => {
-    let sObj = await fs.promises.readFile(pathname, options);
-    let obj = JSON.parse(sObj);
+/*
+//          No longer changing token, needs to be static unless every time you change key, you need to use
+//                  apiClient.helix.eventSub.deleteAllSubscriptions().then(() => console.log("done"));
 
-    if (obj.hours < 1) obj.secret = crypt.randomBytes(64).toString('hex'), obj.hours = 168;
-    else obj.hours--;
-    await fs.writeFile(pathname, JSON.stringify(obj) ,options);
-    listenerToken = obj.secret;
-}, (1000 * 60 * 60));
+    // Changing the token every 7 days [only if script is continuously online]
+    let tokenPeriod = setInterval(async () => {
+        let sObj = await fs.promises.readFile(pathname, options);
+        let obj = JSON.parse(sObj);
+
+        if (obj.hours < 1) obj.secret = crypt.randomBytes(64).toString('hex'), obj.hours = 168;
+        else obj.hours--;
+        await fs.writeFile(pathname, JSON.stringify(obj) ,options);
+        listenerToken = obj.secret;
+    }, (1000 * 60 * 60));
+*/
 
 /**
  * 
@@ -68,6 +72,7 @@ const listener = new EventSubListener(apiClient, new ReverseProxyAdapter({
     // pathPrefix: "/twitch"
 }), listenerToken);
 
+
 /**
  * 
  *         Discord Webhook & Client library connections,
@@ -81,16 +86,16 @@ client.login(TOKEN);
 client.on("ready", async () => {
     let prompt = `[Twitch] ${client.user.tag} is now online!`;
     console.log(prompt.cyan);
-    // do something
+    client.users.resolve("251091302303662080").send(prompt)
 });
 
 
-/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken );
-/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken );
-/* x Test */ let test = new WebhookClient(testHookID, testHookToken );
-/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken );
-/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken );
-/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken );
+/* Saabpar */ let sbp = new WebhookClient(saabparHookID, saabparHookToken);
+/* Empy */    let emp = new WebhookClient(empyHookID, empyHookToken);
+/* x Test */ let test = new WebhookClient(testHookID, testHookToken);
+/* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken);
+/* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken);
+/* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken);
 
 
 /**
@@ -141,40 +146,50 @@ let streamers = {
  */
 (async () => { 
     try {
-        listener.listen().then(() => console.log(`Twitch EventSubListener Enabled`.green));
+        await listener.listen();
+        console.log(`Twitch EventSubListener Enabled`.brightGreen);
         
+        // //       Instant fix to all my life's problems
+        // apiClient.helix.eventSub.deleteAllSubscriptions().then(() => console.log("done"));
+        // return;
+
         for (const [name, person] of Object.entries(streamers)) {
             
             // User profile data for offline usage & subscription search by userid
             let user = await apiClient.helix.users.getUserByName(name)
-            if (!user) console.log(`${name} does not exist.`);
+            if (!user) console.log(`${name} does not exist.`.brightYellow);
             else {
                 let {displayName, id: userid} = user;
-                console.log(`Subscribing to ${displayName}:${userid}`.gray);
+                console.log(`Subscribing to ${displayName}:${userid}`.brightMagenta);
     
                 // All event handlers are accessed by "subscribeToStreamXXXEvents". Check parameter e for several property changes.
                 streamers[name].subs.online = await listener.subscribeToStreamOnlineEvents(userid, e => {
                     // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName, e.startDate, e.streamType);
+                    console.log(`EVENT ONLINE: ${e.broadcasterDisplayName}`.brightCyan);
+
                     let embed = new MessageEmbed()
                         .setThumbnail(user.profilePictureUrl)
                         .setTitle(`${e.broadcasterDisplayName} just went live!`)
                         .setFooter(`broadcasterID: ${e.broadcasterId} | Stream Type: ${e.streamType}`)
-                        .setDescription(`Started Streaming: ${dayjs(startDate).tz("America/Los_Angeles").format('MM/DD/YYYY hh:mm:ssa')} PST`) 
+                        .setDescription(`Started Streaming: ${dayjs(e.startDate).tz("America/Los_Angeles").format('MM/DD/YYYY hh:mm:ssa')} PST`) 
                     person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
 
     
                 });
                 streamers[name].subs.stream = await listener.subscribeToChannelUpdateEvents(userid, e => {
-                    console.log(e.categoryId, e.categoryName, e.isMature, e.streamLanguage, e.streamTitle, e.userDisplayName, e.userId, e.userName);
-                    // let userData = await e.getUser()
-                    // console.log( userData);
-                    let embed = new MessageEmbed().setTitle(`${name} still streaming! Update:`) .setDescription(`**x${e.streamTitle}**`)
+                    // console.log(e.categoryId, e.categoryName, e.isMature, e.streamLanguage, e.streamTitle);
+// @DEPRECATED: e.userDisplayName, e.userId, e.userName, e.getUser();
+                    console.log(`EVENT CHANGE: ${e.broadcasterDisplayName}`.brightCyan);
+
+                    let embed = new MessageEmbed().setTitle(`${name} made a channel update:`) .setDescription(`**${e.streamTitle}**`)
                     .setFooter(`Category: ${e.categoryName} | Language: ${e.streamLanguage} | Mature Only ${e.isMature}`).setThumbnail(user.profilePictureUrl)
                     person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+
     
                 });
                 streamers[name].subs.offline = await listener.subscribeToStreamOfflineEvents(userid, e => {
                     // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName);
+                    console.log(`EVENT OFFLINE: ${e.broadcasterDisplayName}`.brightCyan);
     
                     let embed = new MessageEmbed()
                         .setTitle(`${e.broadcasterDisplayName} just went offline`)
@@ -182,23 +197,29 @@ let streamers = {
                         .setDescription("Streamed for x min/hr")
                     person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
 
-    
                 });
             }
         }
+        console.log("Finished subscription to streamers.".green);
+        // List out amount of webhooks registered to the client // https://d-fischer.github.io/versions/4.4/twitch/reference/classes/HelixEventSubApi.html#getSubscriptionsPaginated
+        console.log( await apiClient.helix.eventSub.getSubscriptionsPaginated().getTotalCount() + " hooks enabled.".green)
+
         // Script end SIGINT callback defined to stop all ongoing subscriptions.
         process.on("SIGINT", async () => {
             console.log(`Closing Script`);
-            // Kill all twitch subscription listeners & token interval beforing ending script. 
-            clearInterval(tokenPeriod);
-            let streams = []
-            for (x in streamers) streams.push(x.subs.online.off(), x.subs.stream.off(), x.subs.offline.off());
-            
-            Promise.all(streams).then(() => process.exit());
+            // Kill all twitch subscription listeners & token interval beforing ending script.
+            // @ALTERNATIVE  maybe try https://d-fischer.github.io/versions/4.4/twitch/reference/classes/HelixEventSubApi.html#getSubscriptionsPaginated
+            const streams = Object.values(streamers).flatMap(streamer => [
+                streamer.subs.online.stop(),
+                streamer.subs.stream.stop(),
+                streamer.subs.offline.stop()
+            ]);
+            await Promise.all(streams);
+            process.exit();
             
         });
 
-    } catch (e) {console.log("Lister & Subscription Error: ".red, e)}
+    } catch (e) {console.log("Lister & Subscription Error: ".brightRed, e)}
 })();
 
 
@@ -206,6 +227,6 @@ let streamers = {
     (async () => {
         try {
             //
-        } catch (e) {console.log("HELPPPPPPPPP 2".red, e)}
+        } catch (e) {console.log("HELPPPPPPPPP 2".brightRed, e)}
     })();
 */
