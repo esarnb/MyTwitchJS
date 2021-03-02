@@ -3,8 +3,9 @@ require("dotenv").config();
 
 
 require("colors");
-let dayjs = require("dayjs");
-let crypt = require('crypto');
+const dayjs = require("dayjs");
+const axios = require("axios");
+const crypt = require('crypto');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const relativeTime = require('dayjs/plugin/relativeTime');
@@ -107,34 +108,34 @@ client.on("ready", async () => {
  */
 let streamers = {
     // testing 
-    "EmperorSR": { hooks: [test],                          subs: {online: null, offline:null, stream: null} }, 
+    "EmperorSR": { hooks: [test],                     subs: {online: null, offline:null, stream: null}, started: null, game: null }, 
     
     // // Saabpar
-    "saabpar": { hooks: [sbp, venvi],                      subs: {online: null, offline:null, stream: null} },
-    "TheresaaRere": { hooks: [sbp, aylin],                 subs: {online: null, offline:null, stream: null} },
-    "go_malabananas": { hooks: [sbp],                      subs: {online: null, offline:null, stream: null} },
-    "snsilentninja": { hooks: [sbp],                       subs: {online: null, offline:null, stream: null} },
-    "Backwoodraider": { hooks: [sbp],                        subs: {online: null, offline:null, stream: null} },
-    "whiskrskittles7": { hooks: [sbp],                     subs: {online: null, offline:null, stream: null} },
-    "yngplo": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null} },
+    "saabpar": { hooks: [sbp, venvi],                      subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "TheresaaRere": { hooks: [sbp, aylin],                 subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "go_malabananas": { hooks: [sbp],                      subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "snsilentninja": { hooks: [sbp],                       subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "Backwoodraider": { hooks: [sbp],                      subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "whiskrskittles7": { hooks: [sbp],                     subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "yngplo": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null}, started: null, game: null },
 
     // // Aylin
-    "nyxnxn": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null} },
-            // "bonedipcollect": { hooks: [sbp, aylin],    subs: {online: null, offline:null, stream: null} },
-            // "brotherpiko": { hooks: [aylin],            subs: {online: null, offline:null, stream: null} },
-            // "mr_shorty13": { hooks: [aylin],            subs: {online: null, offline:null, stream: null} },
-            // "lineant": { hooks: [aylin],                subs: {online: null, offline:null, stream: null} },
-            // "trianglemikey": { hooks: [aylin],          subs: {online: null, offline:null, stream: null} },
-            // "CHANCEBEFLYAf": { hooks: [aylin],          subs: {online: null, offline:null, stream: null} },
+    "nyxnxn": { hooks: [sbp],                              subs: {online: null, offline:null, stream: null}, started: null, game: null },
+            // "bonedipcollect": { hooks: [sbp, aylin],    subs: {online: null, offline:null, stream: null}, started: null, game: null },
+            // "brotherpiko": { hooks: [aylin],            subs: {online: null, offline:null, stream: null}, started: null, game: null },
+            // "mr_shorty13": { hooks: [aylin],            subs: {online: null, offline:null, stream: null}, started: null, game: null },
+            // "lineant": { hooks: [aylin],                subs: {online: null, offline:null, stream: null}, started: null, game: null },
+            // "trianglemikey": { hooks: [aylin],          subs: {online: null, offline:null, stream: null}, started: null, game: null },
+            // "CHANCEBEFLYAf": { hooks: [aylin],          subs: {online: null, offline:null, stream: null}, started: null, game: null },
 
     // // Kikle
-    "xkiklex": { hooks: [kikle],                           subs: {online: null, offline:null, stream: null} },
+    "xkiklex": { hooks: [kikle],                           subs: {online: null, offline:null, stream: null}, started: null, game: null },
 
     // // Personal
-    "michaelreeves": { hooks: [emp],                       subs: {online: null, offline:null, stream: null} },
-    // "xQcOW": { hooks: [emp],                            subs: {online: null, offline:null, stream: null} },
-    // "Souljaboy": { hooks: [emp],                        subs: {online: null, offline:null, stream: null} },
-    // "Smii7y": { hooks: [emp],                           subs: {online: null, offline:null, stream: null} },
+    "michaelreeves": { hooks: [emp],                       subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    // "xQcOW": { hooks: [emp],                            subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    // "Souljaboy": { hooks: [emp],                        subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    // "Smii7y": { hooks: [emp],                           subs: {online: null, offline:null, stream: null}, started: null, game: null },
 };
 
 
@@ -166,37 +167,61 @@ let streamers = {
                 streamers[name].subs.online = await listener.subscribeToStreamOnlineEvents(userid, e => {
                     // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName, e.startDate, e.streamType);
                     console.log(`EVENT ONLINE: ${e.broadcasterDisplayName}`.brightCyan);
-
+                    streamers[name].started = e.startDate;
                     let embed = new MessageEmbed()
                         .setThumbnail(user.profilePictureUrl)
-                        .setTitle(`${e.broadcasterDisplayName} just went live!`)
+                        .setTitle(`${e.broadcasterDisplayName} ${e.streamType === "live" ? "just went" : "is"} ${e.streamType}!`)
                         .setFooter(`broadcasterID: ${e.broadcasterId} | Stream Type: ${e.streamType}`)
-                        .setDescription(`Started Streaming: ${dayjs(e.startDate).tz("America/Los_Angeles").format('MM/DD/YYYY hh:mm:ssa')} PST`) 
-                    person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+                        .setDescription(`Started Streaming: ${dayjs(e.startDate).tz("America/Los_Angeles").format('MM/DD hh:mma')} PST\n\`+2 CST | +3 EST | +8 UTC\``) 
+                    streamers[name].hooks.every(async (channel) => { await channel.send({embeds: [embed]}) });
 
     
                 });
-                streamers[name].subs.stream = await listener.subscribeToChannelUpdateEvents(userid, e => {
+                streamers[name].subs.stream = await listener.subscribeToChannelUpdateEvents(userid, async e => {
                     // console.log(e.categoryId, e.categoryName, e.isMature, e.streamLanguage, e.streamTitle);
 // @DEPRECATED: e.userDisplayName, e.userId, e.userName, e.getUser();
                     console.log(`EVENT CHANGE: ${e.broadcasterDisplayName}`.brightCyan);
+                    let embed = new MessageEmbed().setTitle(`${name} made a channel update:`) .setDescription(`\`\`\`dsconfig\n${e.streamTitle}\`\`\`\n`)
+                    .setFooter(`Category: ${e.categoryName} | Language: ${e.streamLanguage} | Mature Only: ${e.isMature}`);
+                    
+                    embed.addField(streamers[name].started ? "Currently Streaming!": "Not currently streaming.", streamers[name].started ? `Streaming for ${dayjs(streamers[name].started).fromNow(true)}` : `Streamer is offline.`);
 
-                    let embed = new MessageEmbed().setTitle(`${name} made a channel update:`) .setDescription(`**${e.streamTitle}**`)
-                    .setFooter(`Category: ${e.categoryName} | Language: ${e.streamLanguage} | Mature Only ${e.isMature}`).setThumbnail(user.profilePictureUrl)
-                    person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+                    let game = await e.getGame();
+                    if (game) {
+                        embed.addField("Game", game.name);
+                        let newBoxStr = game.boxArtUrl.replace("-{width}x{height}", "")
+                        let fetchGamePic = await axios.get(newBoxStr.replace("-{width}x{height}", ""), {responseType: 'arraybuffer'})
+                        embed.attachFiles([{name: "game.png", attachment: fetchGamePic.data}]).setThumbnail('attachment://game.png')
+                    }
+
+                    /*              What if I use apiHelix to get .stream data instead of relying on broadcaster?
+
+                    // Fetch the image provided by twitch's livestream URL property with axios (bypassing Discord's Cache Problem)
+                    
+                    let { gameId, id, startDate, thumbnailUrl, title, type, userDisplayName} = stream;
+                    let fetchLive = await axios.get(thumbnailUrl.replace("-{width}x{height}", ""), {responseType: 'arraybuffer'})
+                    embed.attachFiles([{name: "livestream.png", attachment: fetchLive.data}]).setImage('attachment://livestream.png')
+
+                    
+
+                    */
+                    
+                    streamers[name].hooks.every(async (channel) => { await channel.send({embeds: [embed]}) });
+                    
 
     
                 });
                 streamers[name].subs.offline = await listener.subscribeToStreamOfflineEvents(userid, e => {
                     // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName);
                     console.log(`EVENT OFFLINE: ${e.broadcasterDisplayName}`.brightCyan);
-    
+                    
                     let embed = new MessageEmbed()
                         .setTitle(`${e.broadcasterDisplayName} just went offline`)
                         .setThumbnail(user.profilePictureUrl)
-                        .setDescription("Streamed for x min/hr")
-                    person.hooks.every((channel) => { channel.send({embeds: [embed]}) });
+                        .setDescription(`Streamed for ${dayjs(streamers[name].started).fromNow(true)}`)
+                    streamers[name].hooks.every(async (channel) => { await channel.send({embeds: [embed]}) });
 
+                    streamers[name].started = null;
                 });
             }
         }
@@ -210,9 +235,7 @@ let streamers = {
             // Kill all twitch subscription listeners & token interval beforing ending script.
             // @ALTERNATIVE  maybe try https://d-fischer.github.io/versions/4.4/twitch/reference/classes/HelixEventSubApi.html#getSubscriptionsPaginated
             const streams = Object.values(streamers).flatMap(streamer => [
-                streamer.subs.online.stop(),
-                streamer.subs.stream.stop(),
-                streamer.subs.offline.stop()
+                streamer.subs.online.stop(), streamer.subs.stream.stop(), streamer.subs.offline.stop()
             ]);
             await Promise.all(streams);
             process.exit();
