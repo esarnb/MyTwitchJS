@@ -164,7 +164,7 @@ let streamers = {
                 console.log(`Subscribing to ${displayName}:${userid}`.brightMagenta);
     
                 // All event handlers are accessed by "subscribeToStreamXXXEvents". Check parameter e for several property changes.
-                streamers[name].subs.online = await listener.subscribeToStreamOnlineEvents(userid, e => {
+                streamers[name].subs.online = await listener.subscribeToStreamOnlineEvents(userid, async e => {
                     // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName, e.startDate, e.streamType);
                     console.log(`EVENT ONLINE: ${e.broadcasterDisplayName}`.brightCyan);
                     streamers[name].started = e.startDate;
@@ -172,20 +172,25 @@ let streamers = {
                         .setThumbnail(user.profilePictureUrl)
                         .setTitle(`${e.broadcasterDisplayName} ${e.streamType === "live" ? "just went" : "is"} ${e.streamType}!`)
                         .setFooter(`broadcasterID: ${e.broadcasterId} | Stream Type: ${e.streamType}`)
-                        .setDescription(`Started Streaming: ${dayjs(e.startDate).tz("America/Los_Angeles").format('MM/DD hh:mma')} PST\n\`+2 CST | +3 EST | +8 UTC\``) 
+                        .setDescription(`Currently Streaming [here](https://twitch.tv/${e.broadcasterName})! \nStarted Streaming: ${dayjs(e.startDate).tz("America/Los_Angeles").format('MM/DD hh:mma')} PST\n\`+2 CST | +3 EST | +8 UTC\``);
+                    
+                    // Fetch the image provided by twitch's livestream URL property with axios (bypassing Discord's Cache Problem)
+                    let { thumbnailUrl } = await apiClient.helix.streams.getStreamByUserId(userid);
+                    let fetchLive = await axios.get(thumbnailUrl.replace("-{width}x{height}", ""), {responseType: 'arraybuffer'})
+                    embed.attachFiles([{name: "livestream.png", attachment: fetchLive.data}]).setImage('attachment://livestream.png')
+ 
+                     
                     streamers[name].hooks.every(async (channel) => { await channel.send({embeds: [embed]}) });
 
     
                 });
                 streamers[name].subs.stream = await listener.subscribeToChannelUpdateEvents(userid, async e => {
-                    // console.log(e.categoryId, e.categoryName, e.isMature, e.streamLanguage, e.streamTitle);
+                    // console.log(e.broadcasterDisplayName, e.broadcasterId, e.broadcasterName, e.categoryId, e.categoryName, e.isMature, e.streamLanguage, e.streamTitle);
 // @DEPRECATED: e.userDisplayName, e.userId, e.userName, e.getUser();
                     console.log(`EVENT CHANGE: ${e.broadcasterDisplayName}`.brightCyan);
                     let embed = new MessageEmbed().setTitle(`${name} made a channel update:`) .setDescription(`\`\`\`dsconfig\n${e.streamTitle}\`\`\`\n`)
                     .setFooter(`Category: ${e.categoryName} | Language: ${e.streamLanguage} | Mature Only: ${e.isMature}`);
                     
-                    embed.addField(streamers[name].started ? "Currently Streaming!": "Not currently streaming.", streamers[name].started ? `Streaming for ${dayjs(streamers[name].started).fromNow(true)}` : `Streamer is offline.`);
-
                     let game = await e.getGame();
                     if (game) {
                         embed.addField("Game", game.name);
@@ -194,18 +199,45 @@ let streamers = {
                         embed.attachFiles([{name: "game.png", attachment: fetchGamePic.data}]).setThumbnail('attachment://game.png')
                     }
 
-                    /*              What if I use apiHelix to get .stream data instead of relying on broadcaster?
+                    //              What if I use apiHelix to get .stream data instead of relying on broadcaster?
+
+                    // { gameId, id, language, startDate, tagIds, thumbnailUrl, title, type, userDisplayName, userId, userName, viewers }
+                    // methods  getGame, getTags, getThumbnailUrl, getUser
+
+                    // DO NOT DECONSTRUCT METHODS, they use .this so it would lose _data if deconstructed.
+                    let { thumbnailUrl, startDate, viewers } = await apiClient.helix.streams.getStreamByUserId(userid);
 
                     // Fetch the image provided by twitch's livestream URL property with axios (bypassing Discord's Cache Problem)
-                    
-                    let { gameId, id, startDate, thumbnailUrl, title, type, userDisplayName} = stream;
                     let fetchLive = await axios.get(thumbnailUrl.replace("-{width}x{height}", ""), {responseType: 'arraybuffer'})
                     embed.attachFiles([{name: "livestream.png", attachment: fetchLive.data}]).setImage('attachment://livestream.png')
 
+                    // setup currently online or offline embed for each channel change.
+                    startDate ? streamers[name].started = startDate : streamers[name].started = null;
+                    streamers[name].started ? embed.addField(`Currently Streaming!`,`Streaming for about ${dayjs(streamers[name].started).fromNow(true)} [here](https://twitch.tv/${e.broadcasterName})!`) : embed.addField("Not currently streaming.", "Streamer is offline.");
                     
+                    // setup thumbnail of stream onto embed
+                    // ERROR: Cannot read property '_data' of undefined
+                    // SOLUTION: it is because deconstructing a function loses {this} context, so it couldn't find _data.
 
-                    */
+                            // let thumbnailStream = getThumbnailUrl(300, 400);
+                            // console.log(await getThumbnailUrl(300, 400));
                     
+                    // solution 1
+                    // let myThumbnail = (await apiClient.helix.streams.getStreamByUserId(userid)).getThumbnailUrl(300,400);
+                    // embed.setImage(myThumbnail)
+
+                    // solution 2
+                    // if (thumbnailUrl) embed.setImage(thumbnailUrl.replace("-{width}x{height}", ""))
+                            
+                    // setup viewers field if there are any
+                    if (viewers) embed.addField("Viewers", viewers + " currently watching.");
+                            
+                    // setup tags field if there are any
+                    // ERROR: Cannot read property '_client' of undefined
+                            // let tagStream = await getTags() 
+                            // tagStream = tagStream.map(x => x.getName());
+                            // embed.addField("Tags", tagStream.join(" | "))
+
                     streamers[name].hooks.every(async (channel) => { await channel.send({embeds: [embed]}) });
                     
 
