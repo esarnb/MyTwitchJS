@@ -88,7 +88,6 @@ let HelixStream = {
   _validityInSeconds: 100000,
   _verified: false,
   _userId: '77008186',
-  _secret: 'X6hznfGsU1k9G721',
   _refreshTimer: Timeout {
     _idleTimeout: 80000000,
     _idlePrev: [TimersList],
