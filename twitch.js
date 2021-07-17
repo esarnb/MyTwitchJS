@@ -29,6 +29,8 @@ const {
     aylinHookID, aylinHookToken, 
     venviHookID, venviHookToken, 
     kikiHookID, kikiHookToken,
+    theresaaHookID, theresaaHookToken,
+    chellemoosHookID, chellemoosHookToken
 } = process.env;
 
 /**
@@ -37,7 +39,7 @@ const {
  *     but needs to be persistent between server restarts. 
  * 
  */
-let pathname = "./tokens.json", options = {encoding: "utf-8"};
+let pathname = "./tokens.yaml", options = {encoding: "utf-8"};
 let getToken = fs.readFileSync(pathname, options);
 let parseToken = JSON.parse(getToken)
 let listenerToken = parseToken.secret;
@@ -97,7 +99,8 @@ client.on("ready", async () => {
 /* Aylin */ let aylin = new WebhookClient(aylinHookID, aylinHookToken);
 /* Venvi */ let venvi = new WebhookClient(venviHookID, venviHookToken);
 /* Kikle */ let kikle = new WebhookClient(kikiHookID, kikiHookToken);
-
+/* Theresaa */ let theresaa = new WebhookClient(theresaaHookID, theresaaHookToken);
+/* chellemoos */ let chellemoos = new WebhookClient(chellemoosHookID, chellemoosHookToken);
 
 /**
  * 
@@ -112,7 +115,7 @@ let streamers = {
     
     // // Saabpar
     "saabpar": { hooks: [sbp, venvi],                      subs: {online: null, offline:null, stream: null}, started: null, game: null },
-    "TheresaaRere": { hooks: [sbp, aylin],                 subs: {online: null, offline:null, stream: null}, started: null, game: null },
+    "TheresaaRere": { hooks: [sbp, aylin, theresaa],                 subs: {online: null, offline:null, stream: null}, started: null, game: null },
     "go_malabananas": { hooks: [sbp],                      subs: {online: null, offline:null, stream: null}, started: null, game: null },
     "snsilentninja": { hooks: [sbp],                       subs: {online: null, offline:null, stream: null}, started: null, game: null },
     "Backwoodraider": { hooks: [sbp],                      subs: {online: null, offline:null, stream: null}, started: null, game: null },
@@ -130,6 +133,9 @@ let streamers = {
 
     // // Kikle
     "xkiklex": { hooks: [kikle],                           subs: {online: null, offline:null, stream: null}, started: null, game: null },
+
+     // // chellemoos
+     "chellemoos": { hooks: [chellemoos],                  subs: {online: null, offline:null, stream: null}, started: null, game: null },
 
     // // Personal
     "michaelreeves": { hooks: [emp],                       subs: {online: null, offline:null, stream: null}, started: null, game: null },
