@@ -1,3 +1,4 @@
 .env
 tokens.json
+tokens.yaml
 node_modules/
