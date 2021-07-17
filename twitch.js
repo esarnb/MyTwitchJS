@@ -282,12 +282,3 @@ let streamers = {
 
     } catch (e) {console.log("Lister & Subscription Error: ".brightRed, e)}
 })();
-
-
-/*
-    (async () => {
-        try {
-            //
-        } catch (e) {console.log("HELPPPPPPPPP 2".brightRed, e)}
-    })();
-*/
